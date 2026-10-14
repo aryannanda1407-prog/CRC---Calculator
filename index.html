@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CRC Calculator - Cyclic Redundancy Check</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= HEADER ================= -->
+  <header class="hero">
+    <div class="hero-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+    </div>
+    <h1>CRC CALCULATOR</h1>
+    <p class="subtitle">Cyclic Redundancy Check &mdash; Error Detection System</p>
+    <p class="hero-text">
+      When data travels over a network, noise can flip some of its bits. CRC adds a short
+      check value to the data before it is sent. The receiver recalculates that value and
+      can tell, with very high probability, whether the data was damaged on the way.
+    </p>
+  </header>
+
+  <!-- ================= NAVIGATION ================= -->
+  <nav class="tabs" role="tablist" aria-label="Main sections">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="tab-generate" data-tab="generate">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+      <span>Generate CRC</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-verify" data-tab="verify">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11l2 2 4-4"/></svg>
+      <span>Verify Received Data</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-how" data-tab="how">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v4h1"/></svg>
+      <span>How CRC Works</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-about" data-tab="about">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+      <span>About the Project</span>
+    </button>
+  </nav>
+
+  <main class="container">
+
+    <!-- ================= GENERATE ================= -->
+    <section id="tab-generate" class="panel active" role="tabpanel">
+      <div class="card">
+        <h2>Generate CRC</h2>
+        <p class="muted">Enter the data to send and the generator polynomial. Both must be binary (only 0 and 1).</p>
+
+        <div class="field">
+          <label for="gen-data">Original binary data</label>
+          <input id="gen-data" type="text" class="mono" placeholder="e.g. 100100" autocomplete="off" spellcheck="false" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="gen-poly">Generator polynomial (binary)</label>
+          <input id="gen-poly" type="text" class="mono" placeholder="e.g. 1101" autocomplete="off" spellcheck="false" inputmode="numeric">
+          <small class="hint">At least 2 bits, and it must start with 1. Example: 1101 means x&sup3; + x&sup2; + 1.</small>
+        </div>
+
+        <div class="btn-row">
+          <button id="gen-btn" class="btn primary big">Generate CRC</button>
+          <button id="gen-example" class="btn ghost">Load example</button>
+          <button id="gen-reset" class="btn ghost">Clear</button>
+        </div>
+        <div id="gen-error" class="message error" role="alert" hidden></div>
+      </div>
+
+      <div id="gen-results" hidden>
+        <div class="result-grid">
+          <div class="card result">
+            <h3>Original Data</h3>
+            <div id="r-data" class="bits"></div>
+          </div>
+          <div class="card result">
+            <h3>Generator Polynomial</h3>
+            <div id="r-poly" class="bits"></div>
+          </div>
+          <div class="card result wide">
+            <h3>Data After Appending Zeros</h3>
+            <div id="r-padded" class="bits"></div>
+            <p class="muted small" id="r-padded-note"></p>
+          </div>
+          <div class="card result">
+            <h3>CRC Remainder</h3>
+            <div id="r-crc" class="bits accent"></div>
+          </div>
+          <div class="card result final wide">
+            <h3>Final Transmitted Data</h3>
+            <div id="r-final" class="bits big"></div>
+            <div class="btn-row">
+              <button id="copy-final" class="btn primary">Copy transmitted data</button>
+              <button id="copy-gen-all" class="btn ghost">Copy full result</button>
+            </div>
+            <div id="gen-copy-msg" class="message success" role="status" hidden></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Division steps</h3>
+          <p class="muted small">Each step shows the current bits, what was XORed with them (the generator, or all zeros when the leading bit is 0), and the result.</p>
+          <pre id="gen-steps" class="steps"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VERIFY ================= -->
+    <section id="tab-verify" class="panel" role="tabpanel" hidden>
+      <div class="card">
+        <h2>Verify Received Data</h2>
+        <p class="muted">Enter the data the receiver got (data + CRC) and the same generator polynomial the sender used.</p>
+
+        <div class="field">
+          <label for="ver-data">Received binary data</label>
+          <input id="ver-data" type="text" class="mono" placeholder="e.g. 100100001" autocomplete="off" spellcheck="false" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="ver-poly">Generator polynomial (binary)</label>
+          <input id="ver-poly" type="text" class="mono" placeholder="e.g. 1101" autocomplete="off" spellcheck="false" inputmode="numeric">
+        </div>
+
+        <div class="btn-row">
+          <button id="ver-btn" class="btn primary big">Verify Data</button>
+          <button id="ver-example-ok" class="btn ghost">Load valid example</button>
+          <button id="ver-example-bad" class="btn ghost">Load corrupted example</button>
+          <button id="ver-reset" class="btn ghost">Clear</button>
+        </div>
+        <div id="ver-error" class="message error" role="alert" hidden></div>
+      </div>
+
+      <div id="ver-results" hidden>
+        <div id="ver-status" class="status" role="status">
+          <div id="ver-status-icon" class="status-icon" aria-hidden="true"></div>
+          <div>
+            <div id="ver-status-text" class="status-text"></div>
+            <p id="ver-status-explain" class="status-explain"></p>
+          </div>
+        </div>
+
+        <div class="result-grid">
+          <div class="card result">
+            <h3>Received Data</h3>
+            <div id="v-data" class="bits"></div>
+          </div>
+          <div class="card result">
+            <h3>Generator Polynomial</h3>
+            <div id="v-poly" class="bits"></div>
+          </div>
+          <div class="card result wide">
+            <h3>Calculated Remainder</h3>
+            <div id="v-rem" class="bits big"></div>
+            <div class="btn-row">
+              <button id="copy-ver" class="btn ghost">Copy result</button>
+            </div>
+            <div id="ver-copy-msg" class="message success" role="status" hidden></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Division steps</h3>
+          <pre id="ver-steps" class="steps"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW IT WORKS ================= -->
+    <section id="tab-how" class="panel" role="tabpanel" hidden>
+      <div class="card">
+        <h2>How CRC Works</h2>
+        <p class="muted">Six steps, from the sender's data to the receiver's check.</p>
+
+        <ol class="steps-list">
+          <li><span class="num">1</span><div><strong>Enter the original binary data.</strong><p>This is the message the sender wants to transmit, for example <code>100100</code>.</p></div></li>
+          <li><span class="num">2</span><div><strong>Append zeros to the data.</strong><p>Add as many zeros as the generator length minus one. A 4-bit generator adds 3 zeros.</p></div></li>
+          <li><span class="num">3</span><div><strong>Perform modulo-2 division using XOR.</strong><p>Whenever the leading bit is 1, XOR with the generator. Otherwise XOR with zeros. Then shift left and bring down the next bit.</p></div></li>
+          <li><span class="num">4</span><div><strong>Obtain the CRC remainder.</strong><p>The bits left after the last step are the CRC. It is always generator length minus one bits long.</p></div></li>
+          <li><span class="num">5</span><div><strong>Append the remainder to create the transmitted data.</strong><p>Replace the appended zeros with the CRC: original data + CRC.</p></div></li>
+          <li><span class="num">6</span><div><strong>The receiver divides the received data to check for errors.</strong><p>Divide by the same generator. A remainder of all zeros means no error was detected. Any 1 means the data was damaged.</p></div></li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>Sender to receiver flow</h3>
+        <div class="flow">
+          <div class="flow-node"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>Sender</span></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="flow-node"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg><span>CRC Generation</span></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="flow-node"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M16 6l6 6-6 6"/></svg><span>Data Transmission</span></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="flow-node"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11l2 2 4-4"/></svg><span>CRC Verification</span></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="flow-node"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>Receiver</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Try it yourself</h3>
+        <p class="muted">Load a ready-made example in the Generate tab and watch every step of the division.</p>
+        <div class="btn-row"><button id="how-try" class="btn primary">Open example in Generate CRC</button></div>
+      </div>
+    </section>
+
+    <!-- ================= ABOUT ================= -->
+    <section id="tab-about" class="panel" role="tabpanel" hidden>
+      <div class="card">
+        <h2>About the Project</h2>
+        <dl class="facts">
+          <div><dt>Project Name</dt><dd>CRC Calculator</dd></div>
+          <div><dt>Full Form</dt><dd>Cyclic Redundancy Check</dd></div>
+          <div><dt>Original implementation</dt><dd>C++ (console application)</dd></div>
+          <div><dt>Web Interface</dt><dd>HTML, CSS, JavaScript</dd></div>
+          <div><dt>Application</dt><dd>Data communication and error detection</dd></div>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h3>XOR and modulo-2 division</h3>
+        <p>XOR (exclusive OR) outputs 1 only when its two input bits are different. It is addition without a carry.</p>
+        <table class="xor-table">
+          <thead><tr><th>A</th><th>B</th><th>A XOR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>0</td></tr>
+          </tbody>
+        </table>
+        <p>Modulo-2 division is ordinary long division where every subtraction is replaced by XOR. Because there are no borrows or carries, it is very cheap to build in hardware, which is why networks use it.</p>
+        <p class="muted small">CRC can detect errors but cannot correct them. If an error is detected, the data is normally re-sent.</p>
+      </div>
+
+      <div class="card">
+        <h3>Corrections made while porting from C++</h3>
+        <ul class="plain-list">
+          <li><strong>Data length check.</strong> The C++ code required the data to be at least as long as the generator, even when generating a CRC. That wrongly rejects valid input such as data <code>1</code> with generator <code>1011</code>, because the zeros are appended <em>before</em> dividing. The web version only requires non-empty data when generating, and requires received data of at least generator length when verifying.</li>
+          <li><strong>Input cleaning.</strong> Spaces typed around or inside the binary strings are removed automatically (C++ <code>cin</code> stops reading at the first space).</li>
+          <li><strong>Menu input.</strong> The C++ menu loops forever if a letter is typed instead of a number. The web buttons avoid this entirely.</li>
+          <li><strong>Unchanged and verified.</strong> The division loop itself (XOR when the leading bit is 1, drop the first bit, bring down the next) is correct and was ported as-is.</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">CRC Calculator &middot; Mini Project &middot; Runs entirely in your browser</footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
